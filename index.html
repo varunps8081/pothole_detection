@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pothole Detection & Severity Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: white;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        video {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 10px;
+            border: 2px solid white;
+            border-radius: 5px;
+        }
+        button {
+            background: #ff6f00;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #ff9100;
+        }
+        .severity {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .severity div {
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .minor { background: green; }
+        .medium { background: yellow; color: black; }
+        .severe { background: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Pothole Detection & Severity Analysis</h2>
+        <input type="file" id="videoInput" accept="video/*">
+        <button id="uploadButton">Upload & Analyze</button>
+        <p id="status"></p>
+        <h3>Processed Video</h3>
+        <video id="outputVideo" controls style="display:none;"></video>
+        <h3>Detected Potholes</h3>
+        <div id="potholeResults" class="severity"></div>
+    </div>
+    <script>
+        document.getElementById("uploadButton").addEventListener("click", async function() {
+            const fileInput = document.getElementById("videoInput");
+            const statusText = document.getElementById("status");
+            const resultsContainer = document.getElementById("potholeResults");
+            
+            if (!fileInput.files.length) {
+                alert("Please select a video file first!");
+                return;
+            }
+            
+            let formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            
+            statusText.innerText = "Uploading and processing...";
+            resultsContainer.innerHTML = "";
+            
+            try {
+                let response = await fetch("http://127.0.0.1:8000/upload/", {
+                    method: "POST",
+                    body: formData
+                });
+                
+                let result = await response.json();
+                if (result.processed_video_url) {
+                    document.getElementById("outputVideo").src = result.processed_video_url;
+                    document.getElementById("outputVideo").style.display = "block";
+                    statusText.innerText = "Processing complete!";
+                    
+                    result.potholes.forEach(pothole => {
+                        let severityClass = pothole.severity.toLowerCase();
+                        let potholeDiv = document.createElement("div");
+                        potholeDiv.classList.add(severityClass);
+                        potholeDiv.innerText = `Severity: ${pothole.severity} (Confidence: ${pothole.confidence}%)`;
+                        resultsContainer.appendChild(potholeDiv);
+                    });
+                } else {
+                    statusText.innerText = "Error processing video.";
+                }
+            } catch (error) {
+                statusText.innerText = "Failed to upload video. Try again.";
+            }
+        });
+    </script>
+</body>
+</html>
